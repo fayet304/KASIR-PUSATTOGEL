@@ -203,7 +203,7 @@
 // =====================================================================
 // GANTI URL INI dengan URL Web App hasil deploy Google Apps Script kamu
 // =====================================================================
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxG8AOsRS1QtcczL3vfqImyiKTmTDGcrihz79L2MDqYsaeYxdt-0kRk-HGKz1Lm7Cal/exec';
+const APPS_SCRIPT_URL = 'GANTI_DENGAN_URL_WEB_APP_APPS_SCRIPT';
 
 let currentUser = null;
 let rekeningData = [];
@@ -264,7 +264,6 @@ function logout(){
 function enterApp(){
   document.getElementById('view-login').classList.add('hidden');
   document.getElementById('view-app').classList.remove('hidden');
-  document.getElementById('welcome-text').textContent = 'Halo, ' + currentUser.nama;
   startHeartbeat();
   loadRekening();
   switchTab('dashboard');
