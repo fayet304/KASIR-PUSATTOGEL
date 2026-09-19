@@ -45,12 +45,11 @@
   .breakdown-row:last-child{border-bottom:none;}
 
   /* TRANSAKSI */
-  .rekening-select{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;margin-bottom:16px;}
-  .rekening-chip{flex:0 0 auto;background:var(--card);border:2px solid var(--border);border-radius:12px;padding:12px 16px;min-width:140px;cursor:pointer;}
-  .rekening-chip.active{border-color:var(--primary);background:#eff6ff;}
-  .rekening-chip .rj{font-weight:700;font-size:14px;}
-  .rekening-chip .rn{font-size:12px;color:var(--muted);}
-  .rekening-chip .rs{font-size:14px;font-weight:600;margin-top:4px;color:var(--green);}
+  .bank-card-besar{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;border-radius:var(--radius);padding:24px;margin-bottom:16px;}
+  .bank-card-besar .bj{font-size:22px;font-weight:800;}
+  .bank-card-besar .bn{font-size:14px;opacity:.85;margin-top:2px;}
+  .bank-card-besar .bs-label{font-size:12px;opacity:.75;margin-top:16px;}
+  .bank-card-besar .bs{font-size:26px;font-weight:800;}
 
   .jenis-toggle{display:flex;gap:8px;margin-bottom:16px;}
   .jenis-toggle button{flex:1;background:#fff;border:2px solid var(--border);color:var(--text);}
@@ -95,8 +94,8 @@
 <!-- ================= MAIN APP ================= -->
 <div id="view-app" class="app hidden">
   <div class="topbar">
-    <h2 id="welcome-text">Halo</h2>
-    <button class="logout-btn" onclick="logout()">Keluar</button>
+    <h2>💳 Kasir</h2>
+    <button class="logout-btn" onclick="logout()" title="Keluar">🚪</button>
   </div>
 
   <div class="tabbar">
@@ -132,7 +131,7 @@
 
   <!-- TRANSAKSI -->
   <div id="panel-transaksi" class="hidden">
-    <div class="rekening-select" id="rekening-select"></div>
+    <div id="bank-card-besar" class="bank-card-besar hidden"></div>
 
     <div class="jenis-toggle">
       <button id="jenis-depo" onclick="pilihJenis('Depo')">Depo</button>
@@ -145,54 +144,29 @@
       <div class="bank-pill-row" id="bank-pill-row"></div>
       <div class="form-card">
         <form id="form-depo-wd" onsubmit="submitDepoWd(event)">
-          <label>User ID</label>
+          <label>ID</label>
           <input id="dw-userid" required>
-          <div id="dw-depo-fields">
-            <label>Nama Pengirim</label>
-            <input id="dw-nama-pengirim">
-          </div>
-          <div id="dw-wd-fields" class="hidden">
-            <label>Kirim Kemana</label>
-            <input id="dw-kirim-kemana">
-          </div>
+          <label>Nama Pengirim/Penerima</label>
+          <input id="dw-nama-pihak" required>
           <label>Nominal</label>
           <input id="dw-nominal" type="number" required>
-          <div id="dw-admin-fee-wrap">
-            <label>Admin Fee</label>
-            <input id="dw-admin-fee" type="number" value="0">
-          </div>
+          <label>Admin</label>
+          <input id="dw-admin-fee" type="number" value="0">
           <button class="btn-primary" type="submit">Submit</button>
         </form>
       </div>
     </div>
 
-    <!-- KAS MENU -->
+    <!-- KAS FORM -->
     <div id="form-kas-wrap" class="hidden">
-      <div class="kas-menu">
-        <button id="kas-opt-pengajuan" onclick="pilihKasMenu('pengajuan')"><b>Pengajuan Saldo Kas</b><br><span style="font-size:12px;color:var(--muted)">Kas → Bank</span></button>
-        <button id="kas-opt-setor" onclick="pilihKasMenu('setor')"><b>Setor Saldo</b><br><span style="font-size:12px;color:var(--muted)">Bank Depo → Kas</span></button>
-      </div>
-
-      <div id="form-kas-pengajuan" class="form-card hidden">
-        <form onsubmit="submitKasPengajuan(event)">
-          <label>Dari Kas Mana</label>
-          <select id="kp-kas-asal"></select>
-          <label>Bank Tujuan Saldo</label>
-          <select id="kp-bank-tujuan"></select>
+      <div class="form-card">
+        <form onsubmit="submitKas(event)">
+          <label>Bank Asal</label>
+          <select id="kas-bank-asal"></select>
+          <label>Bank Tujuan (Kas)</label>
+          <select id="kas-kas-tujuan"></select>
           <label>Nominal</label>
-          <input id="kp-nominal" type="number" required>
-          <button class="btn-primary" type="submit">Submit</button>
-        </form>
-      </div>
-
-      <div id="form-kas-setor" class="form-card hidden">
-        <form onsubmit="submitKasSetor(event)">
-          <label>Dari Bank Depo Mana</label>
-          <select id="ks-bank-asal"></select>
-          <label>Ke Kas Mana</label>
-          <select id="ks-kas-tujuan"></select>
-          <label>Nominal</label>
-          <input id="ks-nominal" type="number" required>
+          <input id="kas-nominal" type="number" required>
           <button class="btn-primary" type="submit">Submit</button>
         </form>
       </div>
@@ -304,118 +278,94 @@ async function loadDashboard(){
 }
 
 // ---------- REKENING ----------
+function isTrue(v){ return v===true || v==='TRUE' || v==='true'; }
+
 async function loadRekening(){
   const res = await callApi('getRekening');
   if(!res.success) return;
   rekeningData = res.data;
-  renderRekeningSelect();
   renderKasDropdowns();
-}
-
-function renderRekeningSelect(){
-  const wrap = document.getElementById('rekening-select');
-  wrap.innerHTML = rekeningData.filter(r=>r.tipe==='Bank').map(r=>`
-    <div class="rekening-chip ${r.id===selectedRekeningId?'active':''}" onclick="pilihRekening('${r.id}')">
-      <div class="rj">${r.jenis_bank}</div>
-      <div class="rn">${r.nama_akun}</div>
-      <div class="rs">${formatRp(r.saldo)}</div>
-    </div>`).join('');
 }
 
 function pilihRekening(id){
   selectedRekeningId = id;
-  currentBank = id;
-  renderRekeningSelect();
+  renderBankPills();
+  renderBankCardBesar();
+}
+
+function renderBankCardBesar(){
+  const el = document.getElementById('bank-card-besar');
+  const rek = rekeningData.find(r=>r.id===selectedRekeningId);
+  if(!rek){ el.classList.add('hidden'); return; }
+  el.classList.remove('hidden');
+  el.innerHTML = `
+    <div class="bj">${rek.jenis_bank}</div>
+    <div class="bn">${rek.nama_akun}</div>
+    <div class="bs-label">Saldo Akhir</div>
+    <div class="bs">${formatRp(rek.saldo)}</div>`;
 }
 
 function renderKasDropdowns(){
-  const kasList = rekeningData.filter(r=>r.tipe==='Kas');
-  const bankList = rekeningData.filter(r=>r.tipe==='Bank');
-  const optKas = kasList.map(k=>`<option value="${k.id}">${k.nama_akun}</option>`).join('');
-  const optBank = bankList.map(b=>`<option value="${b.id}">${b.jenis_bank} - ${b.nama_akun}</option>`).join('');
-  document.getElementById('kp-kas-asal').innerHTML = optKas;
-  document.getElementById('kp-bank-tujuan').innerHTML = optBank;
-  document.getElementById('ks-bank-asal').innerHTML = optBank;
-  document.getElementById('ks-kas-tujuan').innerHTML = optKas;
+  const bankAktif = rekeningData.filter(r=>r.tipe==='Bank' && isTrue(r.aktif));
+  const kasAktif = rekeningData.filter(r=>r.tipe==='Kas' && isTrue(r.aktif));
+  document.getElementById('kas-bank-asal').innerHTML = bankAktif.map(b=>`<option value="${b.id}">${b.jenis_bank} - ${b.nama_akun}</option>`).join('');
+  document.getElementById('kas-kas-tujuan').innerHTML = kasAktif.map(k=>`<option value="${k.id}">${k.nama_akun}</option>`).join('');
 }
 
 // ---------- JENIS: Depo / WD / Kas ----------
 function pilihJenis(jenis){
   currentJenis = jenis;
+  selectedRekeningId = null;
   document.getElementById('jenis-depo').classList.toggle('active', jenis==='Depo');
   document.getElementById('jenis-wd').classList.toggle('active', jenis==='WD');
   document.getElementById('jenis-kas').classList.toggle('active', jenis==='Kas');
 
   document.getElementById('form-bank-wrap').classList.toggle('hidden', jenis==='Kas');
   document.getElementById('form-kas-wrap').classList.toggle('hidden', jenis!=='Kas');
+  document.getElementById('bank-card-besar').classList.add('hidden');
 
-  if(jenis==='Depo' || jenis==='WD'){
-    document.getElementById('dw-depo-fields').classList.toggle('hidden', jenis!=='Depo');
-    document.getElementById('dw-wd-fields').classList.toggle('hidden', jenis!=='WD');
-    document.getElementById('dw-admin-fee-wrap').classList.toggle('hidden', jenis!=='Depo');
-    renderBankPills();
-  }
+  if(jenis==='Depo' || jenis==='WD') renderBankPills();
 }
 
 function renderBankPills(){
-  const bankList = rekeningData.filter(r=>r.tipe==='Bank');
+  // Depo -> hanya bank dengan bisa_deposit aktif. WD -> hanya bank dengan bisa_withdraw aktif.
+  const filterKey = currentJenis==='Depo' ? 'bisa_deposit' : 'bisa_withdraw';
+  const bankList = rekeningData.filter(r=>r.tipe==='Bank' && isTrue(r.aktif) && isTrue(r[filterKey]));
   document.getElementById('bank-pill-row').innerHTML = bankList.map(b=>`
     <div class="bank-pill ${b.id===selectedRekeningId?'active':''}" onclick="pilihRekening('${b.id}')">${b.jenis_bank}</div>
   `).join('');
-}
-
-function pilihKasMenu(menu){
-  document.getElementById('kas-opt-pengajuan').classList.toggle('active', menu==='pengajuan');
-  document.getElementById('kas-opt-setor').classList.toggle('active', menu==='setor');
-  document.getElementById('form-kas-pengajuan').classList.toggle('hidden', menu!=='pengajuan');
-  document.getElementById('form-kas-setor').classList.toggle('hidden', menu!=='setor');
 }
 
 // ---------- SUBMIT ----------
 async function submitDepoWd(e){
   e.preventDefault();
   if(!selectedRekeningId){ showToast('Pilih bank dulu'); return; }
-  const nominal = document.getElementById('dw-nominal').value;
   const payload = {
     tipe: currentJenis,
     user_id: document.getElementById('dw-userid').value,
-    nominal,
-    nama_pihak: currentJenis==='Depo' ? document.getElementById('dw-nama-pengirim').value : document.getElementById('dw-kirim-kemana').value,
-    admin_fee: currentJenis==='Depo' ? document.getElementById('dw-admin-fee').value : 0
+    nama_pihak: document.getElementById('dw-nama-pihak').value,
+    nominal: document.getElementById('dw-nominal').value,
+    admin_fee: document.getElementById('dw-admin-fee').value
   };
   if(currentJenis==='Depo') payload.rekening_tujuan = selectedRekeningId;
   if(currentJenis==='WD') payload.rekening_asal = selectedRekeningId;
 
   const res = await callApi('submitTransaksi', payload);
-  if(res.success){ showToast('Transaksi berhasil disimpan'); document.getElementById('form-depo-wd').reset(); loadRekening(); }
+  if(res.success){ showToast('Transaksi berhasil disimpan'); document.getElementById('form-depo-wd').reset(); selectedRekeningId=null; loadRekening(); renderBankPills(); document.getElementById('bank-card-besar').classList.add('hidden'); }
   else showToast(res.message || 'Gagal menyimpan');
 }
 
-async function submitKasPengajuan(e){
-  e.preventDefault();
-  const payload = {
-    tipe:'PengajuanKas',
-    user_id: currentUser.user_id,
-    rekening_asal: document.getElementById('kp-kas-asal').value,
-    rekening_tujuan: document.getElementById('kp-bank-tujuan').value,
-    nominal: document.getElementById('kp-nominal').value
-  };
-  const res = await callApi('submitTransaksi', payload);
-  if(res.success){ showToast('Pengajuan kas berhasil'); e.target.reset(); loadRekening(); }
-  else showToast(res.message || 'Gagal menyimpan');
-}
-
-async function submitKasSetor(e){
+async function submitKas(e){
   e.preventDefault();
   const payload = {
     tipe:'SetorKas',
     user_id: currentUser.user_id,
-    rekening_asal: document.getElementById('ks-bank-asal').value,
-    rekening_tujuan: document.getElementById('ks-kas-tujuan').value,
-    nominal: document.getElementById('ks-nominal').value
+    rekening_asal: document.getElementById('kas-bank-asal').value,
+    rekening_tujuan: document.getElementById('kas-kas-tujuan').value,
+    nominal: document.getElementById('kas-nominal').value
   };
   const res = await callApi('submitTransaksi', payload);
-  if(res.success){ showToast('Setor saldo berhasil'); e.target.reset(); loadRekening(); }
+  if(res.success){ showToast('Transaksi kas berhasil'); e.target.reset(); loadRekening(); }
   else showToast(res.message || 'Gagal menyimpan');
 }
 
