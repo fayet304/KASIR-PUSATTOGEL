@@ -45,11 +45,15 @@
   .breakdown-row:last-child{border-bottom:none;}
 
   /* TRANSAKSI */
-  .bank-card-besar{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;border-radius:var(--radius);padding:24px;margin-bottom:16px;}
+  .bank-card-besar{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;border-radius:var(--radius);padding:24px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;}
   .bank-card-besar .bj{font-size:22px;font-weight:800;}
   .bank-card-besar .bn{font-size:14px;opacity:.85;margin-top:2px;}
   .bank-card-besar .bs-label{font-size:12px;opacity:.75;margin-top:16px;}
   .bank-card-besar .bs{font-size:26px;font-weight:800;}
+  .bank-kode-box{background:rgba(255,255,255,.15);border-radius:12px;padding:14px 18px;min-width:170px;}
+  .bank-kode-box .kk-label{font-size:11px;opacity:.75;text-transform:uppercase;letter-spacing:.5px;}
+  .bank-kode-box .kk-val{font-size:16px;font-weight:700;margin-bottom:10px;word-break:break-all;}
+  .bank-kode-box .kk-val:last-child{margin-bottom:0;}
 
   .jenis-toggle{display:flex;gap:8px;margin-bottom:16px;}
   .jenis-toggle button{flex:1;background:#fff;border:2px solid var(--border);color:var(--text);}
@@ -345,11 +349,21 @@ function renderBankCardBesar(){
   const rek = rekeningData.find(r=>r.id===selectedRekeningId);
   if(!rek){ el.classList.add('hidden'); return; }
   el.classList.remove('hidden');
+
+  const adaKode = rek.kode_login || rek.kode_transfer;
   el.innerHTML = `
-    <div class="bj">${rek.jenis_bank}</div>
-    <div class="bn">${rek.nama_akun}</div>
-    <div class="bs-label">Saldo Akhir</div>
-    <div class="bs">${formatRp(rek.saldo)}</div>`;
+    <div>
+      <div class="bj">${rek.jenis_bank}</div>
+      <div class="bn">${rek.nama_akun}</div>
+      <div class="bs-label">Saldo Akhir</div>
+      <div class="bs">${formatRp(rek.saldo)}</div>
+    </div>
+    ${adaKode ? `
+    <div class="bank-kode-box">
+      ${rek.kode_login ? `<div class="kk-label">Kode Akses Login</div><div class="kk-val">${rek.kode_login}</div>` : ''}
+      ${rek.kode_transfer ? `<div class="kk-label">Kode Transfer</div><div class="kk-val">${rek.kode_transfer}</div>` : ''}
+    </div>` : ''}
+  `;
 }
 
 let arahKas = 'b2k'; // b2k = Bank ke Kas, k2b = Kas ke Bank
