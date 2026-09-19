@@ -80,6 +80,8 @@
   .h-status{font-size:11px;padding:2px 8px;border-radius:10px;margin-top:4px;display:inline-block;}
   .h-status.Proses{background:#dcfce7;color:var(--green);}
   .h-status.Pending{background:#fef3c7;color:#b45309;}
+  .badge{background:var(--red);color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;margin-left:4px;}
+  .btn-mini{background:var(--primary);color:#fff;padding:6px 12px;font-size:12px;border-radius:8px;margin-top:6px;}
 
   @media(min-width:700px){
     .grid-cards{grid-template-columns:1fr 1fr 1fr;}
@@ -115,6 +117,7 @@
   <div class="tabbar">
     <button id="tab-dashboard" class="active" onclick="switchTab('dashboard')">📊 Dashboard</button>
     <button id="tab-transaksi" onclick="switchTab('transaksi')">💳 Transaksi</button>
+    <button id="tab-pending" onclick="switchTab('pending')">⏳ Pending <span id="pending-badge" class="badge hidden">0</span></button>
   </div>
 
   <!-- DASHBOARD -->
@@ -201,6 +204,11 @@
       </div>
     </div>
   </div>
+
+  <!-- PENDING -->
+  <div id="panel-pending" class="hidden">
+    <div id="pending-list"></div>
+  </div>
 </div>
 
 <script>
@@ -270,21 +278,64 @@ function enterApp(){
   document.getElementById('view-app').classList.remove('hidden');
   startHeartbeat();
   loadRekening();
+  loadPending();
   switchTab('dashboard');
 }
 
 function startHeartbeat(){
   callApi('heartbeat', {user_id: currentUser.user_id});
-  heartbeatTimer = setInterval(()=>callApi('heartbeat', {user_id: currentUser.user_id}), 60000);
+  heartbeatTimer = setInterval(()=>{
+    callApi('heartbeat', {user_id: currentUser.user_id});
+    loadPending();
+  }, 60000);
 }
 
 // ---------- TAB SWITCH ----------
 function switchTab(tab){
   document.getElementById('tab-dashboard').classList.toggle('active', tab==='dashboard');
   document.getElementById('tab-transaksi').classList.toggle('active', tab==='transaksi');
+  document.getElementById('tab-pending').classList.toggle('active', tab==='pending');
   document.getElementById('panel-dashboard').classList.toggle('hidden', tab!=='dashboard');
   document.getElementById('panel-transaksi').classList.toggle('hidden', tab!=='transaksi');
+  document.getElementById('panel-pending').classList.toggle('hidden', tab!=='pending');
   if(tab==='dashboard') loadDashboard();
+  if(tab==='pending') loadPending();
+}
+
+// ---------- PENDING ----------
+async function loadPending(){
+  const res = await callApi('getPending');
+  if(!res.success) return;
+  renderPending(res.data);
+  updateBadge(res.data.length);
+}
+
+function renderPending(list){
+  const el = document.getElementById('pending-list');
+  if(!list.length){ el.innerHTML = '<div class="card" style="text-align:center;color:var(--muted)">Tidak ada transaksi pending</div>'; return; }
+  el.innerHTML = list.map(t=>`
+    <div class="histori-row" style="align-items:center">
+      <div>
+        <div class="h-nama">${t.nama_bank} — ${t.nama_pihak || '-'}</div>
+        <div class="h-time">${new Date(t.timestamp).toLocaleString('id-ID')} • ID: ${t.user_id}</div>
+      </div>
+      <div style="text-align:right">
+        <div class="h-nominal">${formatRp(t.nominal)}</div>
+        <button class="btn-mini" onclick="tandaiProses('${t.id}')">Tandai Proses</button>
+      </div>
+    </div>`).join('');
+}
+
+async function tandaiProses(id){
+  const res = await callApi('updateStatus', {id, status:'Proses'});
+  if(res.success){ showToast('Status diperbarui'); loadPending(); }
+  else showToast(res.message || 'Gagal update');
+}
+
+function updateBadge(count){
+  const badge = document.getElementById('pending-badge');
+  if(count>0){ badge.textContent = count; badge.classList.remove('hidden'); }
+  else badge.classList.add('hidden');
 }
 
 // ---------- DASHBOARD ----------
@@ -443,6 +494,7 @@ async function submitDepoWd(e){
     loadRekening();
     renderBankCardBesar();
     loadHistori();
+    loadPending();
   } else showToast(res.message || 'Gagal menyimpan');
 }
 
