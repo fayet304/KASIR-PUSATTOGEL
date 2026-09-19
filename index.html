@@ -184,9 +184,9 @@
           <label>Nama Pengirim/Penerima</label>
           <input id="dw-nama-pihak" required>
           <label>Nominal</label>
-          <input id="dw-nominal" type="number" required>
+          <input id="dw-nominal" type="text" inputmode="numeric" oninput="this.value=formatNominalInput(this.value)" required>
           <label>Admin</label>
-          <input id="dw-admin-fee" type="number" value="0">
+          <input id="dw-admin-fee" type="text" inputmode="numeric" oninput="this.value=formatNominalInput(this.value)" value="0">
           <div id="dw-status-wrap">
             <label>Status</label>
             <select id="dw-status">
@@ -216,7 +216,7 @@
           <label id="kas-label-tujuan">Bank Tujuan (Kas)</label>
           <select id="kas-tujuan"></select>
           <label>Nominal</label>
-          <input id="kas-nominal" type="number" required>
+          <input id="kas-nominal" type="text" inputmode="numeric" oninput="this.value=formatNominalInput(this.value)" required>
           <button class="btn-primary" type="submit">Submit</button>
         </form>
       </div>
@@ -266,9 +266,9 @@
         <label>Nama Pengirim/Penerima</label>
         <input id="edit-nama-pihak">
         <label>Nominal</label>
-        <input id="edit-nominal" type="number" required>
+        <input id="edit-nominal" type="text" inputmode="numeric" oninput="this.value=formatNominalInput(this.value)" required>
         <label>Admin</label>
-        <input id="edit-admin-fee" type="number">
+        <input id="edit-admin-fee" type="text" inputmode="numeric" oninput="this.value=formatNominalInput(this.value)">
         <div id="edit-status-wrap">
           <label>Status</label>
           <select id="edit-status">
@@ -289,7 +289,7 @@
 // =====================================================================
 // GANTI URL INI dengan URL Web App hasil deploy Google Apps Script kamu
 // =====================================================================
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxG8AOsRS1QtcczL3vfqImyiKTmTDGcrihz79L2MDqYsaeYxdt-0kRk-HGKz1Lm7Cal/exec';
+const APPS_SCRIPT_URL = 'GANTI_DENGAN_URL_WEB_APP_APPS_SCRIPT';
 
 let currentUser = null;
 let rekeningData = [];
@@ -316,6 +316,17 @@ function showToast(msg){
 
 function formatRp(n){
   return 'Rp ' + Number(n||0).toLocaleString('id-ID');
+}
+
+// format tampilan input jadi ada titik ribuan, dipanggil tiap user ngetik/paste
+function formatNominalInput(val){
+  const angka = String(val||'').replace(/[^0-9]/g,'');
+  if(!angka) return '';
+  return Number(angka).toLocaleString('id-ID');
+}
+// ambil angka murni (tanpa titik) buat dikirim ke server
+function rawAngka(val){
+  return String(val||'').replace(/[^0-9]/g,'');
 }
 
 // ---------- LOGIN ----------
@@ -427,8 +438,8 @@ function bukaModalEdit(id){
   if(!t) return;
   document.getElementById('edit-id').value = t.id;
   document.getElementById('edit-nama-pihak').value = t.nama_pihak || '';
-  document.getElementById('edit-nominal').value = t.nominal;
-  document.getElementById('edit-admin-fee').value = t.admin_fee || 0;
+  document.getElementById('edit-nominal').value = formatNominalInput(t.nominal);
+  document.getElementById('edit-admin-fee').value = formatNominalInput(t.admin_fee || 0);
   document.getElementById('edit-status').value = t.status || 'Proses';
   document.getElementById('edit-status-wrap').classList.toggle('hidden', t.tipe!=='Depo');
   document.getElementById('modal-edit').classList.remove('hidden');
@@ -443,8 +454,8 @@ async function simpanEditTransaksi(e){
   const payload = {
     id: document.getElementById('edit-id').value,
     nama_pihak: document.getElementById('edit-nama-pihak').value,
-    nominal: document.getElementById('edit-nominal').value,
-    admin_fee: document.getElementById('edit-admin-fee').value,
+    nominal: rawAngka(document.getElementById('edit-nominal').value),
+    admin_fee: rawAngka(document.getElementById('edit-admin-fee').value),
     status: document.getElementById('edit-status').value
   };
   const res = await callApi('editTransaksi', payload);
@@ -646,8 +657,8 @@ async function submitDepoWd(e){
     tipe: currentJenis,
     user_id: document.getElementById('dw-userid').value,
     nama_pihak: document.getElementById('dw-nama-pihak').value,
-    nominal: document.getElementById('dw-nominal').value,
-    admin_fee: document.getElementById('dw-admin-fee').value,
+    nominal: rawAngka(document.getElementById('dw-nominal').value),
+    admin_fee: rawAngka(document.getElementById('dw-admin-fee').value),
     status: currentJenis==='Depo' ? document.getElementById('dw-status').value : 'Proses'
   };
   if(currentJenis==='Depo') payload.rekening_tujuan = selectedRekeningId;
@@ -671,7 +682,7 @@ async function submitKas(e){
     user_id: currentUser.user_id,
     rekening_asal: document.getElementById('kas-asal').value,
     rekening_tujuan: document.getElementById('kas-tujuan').value,
-    nominal: document.getElementById('kas-nominal').value
+    nominal: rawAngka(document.getElementById('kas-nominal').value)
   };
   const res = await callApi('submitTransaksi', payload);
   if(res.success){ showToast('Transaksi kas berhasil'); e.target.reset(); loadRekening(); }
